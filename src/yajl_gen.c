@@ -79,7 +79,7 @@ yajl_gen_config(yajl_gen g, yajl_gen_option opt, ...)
             break;
         }
         case yajl_gen_print_callback:
-            yajl_buf_free(g->ctx);
+            yajl_buf_free((yajl_buf)g->ctx);
             g->print = va_arg(ap, const yajl_print_t);
             g->ctx = va_arg(ap, void *);
             break;
@@ -172,7 +172,7 @@ yajl_gen_free(yajl_gen g)
     if (++(g->depth) >= YAJL_MAX_DEPTH) return yajl_max_depth_exceeded;
 
 #define DECREMENT_DEPTH \
-  if (--(g->depth) >= YAJL_MAX_DEPTH) return yajl_gen_error;
+  if (--(g->depth) >= YAJL_MAX_DEPTH) return (yajl_gen_status)yajl_gen_error;
 
 #define APPENDED_ATOM \
     switch (g->state[g->depth]) {                   \

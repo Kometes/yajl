@@ -60,7 +60,7 @@ static yajl_val value_alloc (yajl_type type)
 {
     yajl_val v;
 
-    v = malloc (sizeof (*v));
+    v = (yajl_val)malloc (sizeof (*v));
     if (v == NULL) return (NULL);
     memset (v, 0, sizeof (*v));
     v->type = type;
@@ -114,7 +114,7 @@ static int context_push(context_t *ctx, yajl_val v)
 {
     stack_elem_t *stack;
 
-    stack = malloc (sizeof (*stack));
+    stack = (stack_elem_t*)malloc (sizeof (*stack));
     if (stack == NULL)
         RETURN_ERROR (ctx, ENOMEM, "Out of memory");
     memset (stack, 0, sizeof (*stack));
@@ -164,12 +164,12 @@ static int object_add_keyval(context_t *ctx,
     /* We're assuring that "obj" is an object in "context_add_value". */
     assert(YAJL_IS_OBJECT(obj));
 
-    tmpk = realloc((void *) obj->u.object.keys, sizeof(*(obj->u.object.keys)) * (obj->u.object.len + 1));
+    tmpk = (const char**)realloc((void *) obj->u.object.keys, sizeof(*(obj->u.object.keys)) * (obj->u.object.len + 1));
     if (tmpk == NULL)
         RETURN_ERROR(ctx, ENOMEM, "Out of memory");
     obj->u.object.keys = tmpk;
 
-    tmpv = realloc(obj->u.object.values, sizeof (*obj->u.object.values) * (obj->u.object.len + 1));
+    tmpv = (yajl_val*)realloc(obj->u.object.values, sizeof (*obj->u.object.values) * (obj->u.object.len + 1));
     if (tmpv == NULL)
         RETURN_ERROR(ctx, ENOMEM, "Out of memory");
     obj->u.object.values = tmpv;
@@ -195,7 +195,7 @@ static int array_add_value (context_t *ctx,
     /* "context_add_value" will only call us with array values. */
     assert(YAJL_IS_ARRAY(array));
     
-    tmp = realloc(array->u.array.values,
+    tmp = (yajl_val*)realloc(array->u.array.values,
                   sizeof(*(array->u.array.values)) * (array->u.array.len + 1));
     if (tmp == NULL)
         RETURN_ERROR(ctx, ENOMEM, "Out of memory");
@@ -277,7 +277,7 @@ static int handle_string (void *ctx,
     if (v == NULL)
         RETURN_ERROR ((context_t *) ctx, STATUS_ABORT, "Out of memory");
 
-    v->u.string = malloc (string_length + 1);
+    v->u.string = (char*)malloc (string_length + 1);
     if (v->u.string == NULL)
     {
         free (v);
@@ -286,7 +286,7 @@ static int handle_string (void *ctx,
     memcpy(v->u.string, string, string_length);
     v->u.string[string_length] = 0;
 
-    return ((context_add_value (ctx, v) == 0) ? STATUS_CONTINUE : STATUS_ABORT);
+    return ((context_add_value ((context_t*)ctx, v) == 0) ? STATUS_CONTINUE : STATUS_ABORT);
 }
 
 static int handle_number (void *ctx, const char *string, size_t string_length)
@@ -298,7 +298,7 @@ static int handle_number (void *ctx, const char *string, size_t string_length)
     if (v == NULL)
         RETURN_ERROR((context_t *) ctx, STATUS_ABORT, "Out of memory");
 
-    v->u.number.r = malloc(string_length + 1);
+    v->u.number.r = (char*)malloc(string_length + 1);
     if (v->u.number.r == NULL)
     {
         free(v);
@@ -321,7 +321,7 @@ static int handle_number (void *ctx, const char *string, size_t string_length)
     if ((errno == 0) && (endptr != NULL) && (*endptr == 0))
         v->u.number.flags |= YAJL_NUMBER_DOUBLE_VALID;
 
-    return ((context_add_value(ctx, v) == 0) ? STATUS_CONTINUE : STATUS_ABORT);
+    return ((context_add_value((context_t*)ctx, v) == 0) ? STATUS_CONTINUE : STATUS_ABORT);
 }
 
 static int handle_start_map (void *ctx)
@@ -336,18 +336,18 @@ static int handle_start_map (void *ctx)
     v->u.object.values = NULL;
     v->u.object.len = 0;
 
-    return ((context_push (ctx, v) == 0) ? STATUS_CONTINUE : STATUS_ABORT);
+    return ((context_push ((context_t*)ctx, v) == 0) ? STATUS_CONTINUE : STATUS_ABORT);
 }
 
 static int handle_end_map (void *ctx)
 {
     yajl_val v;
 
-    v = context_pop (ctx);
+    v = context_pop ((context_t*)ctx);
     if (v == NULL)
         return (STATUS_ABORT);
 
-    return ((context_add_value (ctx, v) == 0) ? STATUS_CONTINUE : STATUS_ABORT);
+    return ((context_add_value ((context_t*)ctx, v) == 0) ? STATUS_CONTINUE : STATUS_ABORT);
 }
 
 static int handle_start_array (void *ctx)
@@ -361,18 +361,18 @@ static int handle_start_array (void *ctx)
     v->u.array.values = NULL;
     v->u.array.len = 0;
 
-    return ((context_push (ctx, v) == 0) ? STATUS_CONTINUE : STATUS_ABORT);
+    return ((context_push ((context_t*)ctx, v) == 0) ? STATUS_CONTINUE : STATUS_ABORT);
 }
 
 static int handle_end_array (void *ctx)
 {
     yajl_val v;
 
-    v = context_pop (ctx);
+    v = context_pop ((context_t*)ctx);
     if (v == NULL)
         return (STATUS_ABORT);
 
-    return ((context_add_value (ctx, v) == 0) ? STATUS_CONTINUE : STATUS_ABORT);
+    return ((context_add_value ((context_t*)ctx, v) == 0) ? STATUS_CONTINUE : STATUS_ABORT);
 }
 
 static int handle_boolean (void *ctx, int boolean_value)
@@ -383,7 +383,7 @@ static int handle_boolean (void *ctx, int boolean_value)
     if (v == NULL)
         RETURN_ERROR ((context_t *) ctx, STATUS_ABORT, "Out of memory");
 
-    return ((context_add_value (ctx, v) == 0) ? STATUS_CONTINUE : STATUS_ABORT);
+    return ((context_add_value ((context_t*)ctx, v) == 0) ? STATUS_CONTINUE : STATUS_ABORT);
 }
 
 static int handle_null (void *ctx)
@@ -394,7 +394,7 @@ static int handle_null (void *ctx)
     if (v == NULL)
         RETURN_ERROR ((context_t *) ctx, STATUS_ABORT, "Out of memory");
 
-    return ((context_add_value (ctx, v) == 0) ? STATUS_CONTINUE : STATUS_ABORT);
+    return ((context_add_value ((context_t*)ctx, v) == 0) ? STATUS_CONTINUE : STATUS_ABORT);
 }
 
 /*
