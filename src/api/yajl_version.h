@@ -20,3 +20,4 @@ extern int YAJL_API yajl_version(void);
 #endif
 
 #endif /* YAJL_VERSION_H_ */
+
