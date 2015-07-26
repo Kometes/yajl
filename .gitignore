@@ -1,3 +1,7 @@
+*.suo
+*.sdf
+*.vcxproj.user
 .DS_Store
-Makefile
-/build/
+xcuserdata
+build
+dist
